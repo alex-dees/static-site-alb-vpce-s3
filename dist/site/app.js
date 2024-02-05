@@ -1,0 +1,1 @@
+document.getElementById('greet').innerHTML = 'Hello!'
