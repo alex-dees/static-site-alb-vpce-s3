@@ -1,8 +1,12 @@
-import { Stack } from 'aws-cdk-lib';
+import * as path from 'path';
+import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as r53 from 'aws-cdk-lib/aws-route53';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as nodefn from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as elb from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 
 export interface SetupProps {
@@ -25,7 +29,7 @@ export class Setup extends Construct {
     this.zone = this.createZone();
     this.s3Ep = this.createEndpoints();
     this.listener = this.createLb();
-    this.createBastion();
+    this.createLambda();
   }
 
   private createZone() {
@@ -109,13 +113,46 @@ export class Setup extends Construct {
     });
   }
 
-  private createBastion(){
-    const host = new ec2.BastionHostLinux(this, 'Bastion', { 
-        vpc: this.vpc,
-        requireImdsv2: true,
-        machineImage: ec2.MachineImage.latestAmazonLinux2()
+  private createLambda() {
+    const bkt = new s3.Bucket(this, 'Scrape', {
+      autoDeleteObjects: true,
+      removalPolicy: cdk.RemovalPolicy.DESTROY
     });
 
-    host.role.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess'));
+    // https://github.com/shelfio/chrome-aws-lambda-layer
+    // const layer = lambda.LayerVersion.fromLayerVersionArn(this, 'Layer', 
+    //   'arn:aws:lambda:us-east-1:764866452798:layer:chrome-aws-lambda:42');
+
+    const layer = new lambda.LayerVersion(this, "Layer", {
+      compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
+      compatibleArchitectures: [lambda.Architecture.X86_64],
+      code: lambda.Code.fromAsset("layers/chromium/chromium-v111.0.0-layer.zip"),
+    });
+
+    const fn = new nodefn.NodejsFunction(this, 'Fn', {
+      vpc: this.vpc,
+      layers: [layer],
+      memorySize: 2048,
+      timeout: cdk.Duration.seconds(30),
+      runtime: lambda.Runtime.NODEJS_18_X,
+      entry: path.join(__dirname, '../../src', 'index.ts'),
+      bundling: {
+        externalModules: [
+          '@aws-sdk/*',
+          '@sparticuz/chromium'
+        ]
+      },
+      environment: {  
+        BUCKET: bkt.bucketName,
+        URL: 'https://poc.sparxlabs.com/site/index.html',
+      }
+    });
+
+    fn.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['s3:*'],
+      resources: ['*']
+    }))
+
   }
 }
