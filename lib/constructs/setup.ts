@@ -88,9 +88,7 @@ export class Setup extends Construct {
   }
 
   private createEndpoint() {
-    // target group health check is HTTP
-    const sg = new ec2.SecurityGroup(this, 'S3EpSg', { vpc: this.vpc });
-    sg.addIngressRule(ec2.Peer.ipv4(this.vpc.vpcCidrBlock), ec2.Port.tcp(80));
+    const sg = new ec2.SecurityGroup(this, 'EpSg', { vpc: this.vpc });
     sg.addIngressRule(ec2.Peer.ipv4(this.vpc.vpcCidrBlock), ec2.Port.tcp(443));
 
     return this.vpc.addInterfaceEndpoint('s3', {

@@ -74,8 +74,8 @@ export class StaticSite extends Construct {
             ],
             healthCheck: {
                 path: '/',
-                port: '80',
-                protocol: elb.Protocol.HTTP,
+                port: '443',
+                protocol: elb.Protocol.HTTPS,
                 healthyHttpCodes: '200,307,405',
                 healthyThresholdCount: 2,
                 unhealthyThresholdCount: 5,
