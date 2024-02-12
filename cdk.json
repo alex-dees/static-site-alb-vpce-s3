@@ -21,7 +21,7 @@
     "app": {
       "sub": "poc",
       "zone": "sparxlabs.com",
-      "cert": ""
+      "cert": "arn:aws:acm:us-east-1:844540003076:certificate/b9f82ce7-84f4-44c7-89f1-19e53f23ca3b"
     },
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     "@aws-cdk/core:checkSecretUsage": true,

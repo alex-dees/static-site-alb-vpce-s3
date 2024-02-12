@@ -14,7 +14,7 @@ export const handler: Handler = async (event) => {
         }); 
         
         const page = await browser.newPage();
-        await page.goto(<string>process.env.URL);
+        await page.goto(<string>event.url);
         const buffer = await page.screenshot();
 
         const client = new S3Client();
