@@ -17,14 +17,8 @@ export class Scraper extends Construct {
     });
 
     // https://github.com/shelfio/chrome-aws-lambda-layer
-    // const layer = lambda.LayerVersion.fromLayerVersionArn(this, 'Layer', 
-    //   'arn:aws:lambda:us-east-1:764866452798:layer:chrome-aws-lambda:42');
-
-    const layer = new lambda.LayerVersion(this, "Layer", {
-      compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
-      compatibleArchitectures: [lambda.Architecture.X86_64],
-      code: lambda.Code.fromAsset("lambda/layers/chromium-v111.0.0-layer.zip"),
-    });
+    const layer = lambda.LayerVersion.fromLayerVersionArn(this, 'Layer', 
+      'arn:aws:lambda:us-east-1:764866452798:layer:chrome-aws-lambda:42');
   
     const fn = new nodefn.NodejsFunction(this, 'Fn', {
       vpc: vpc,
