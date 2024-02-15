@@ -16,16 +16,19 @@ export const handler: Handler = async (event) => {
         const page = await browser.newPage();
         await page.goto(<string>event.url);
         const buffer = await page.screenshot();
-
-        const client = new S3Client();
+        
+        const image = `${Date.now()}.png`;
         const input = {
-          Body: buffer,
-          Key: `${Date.now()}.png`,
-          ContentType: 'image/png',
-          Bucket: process.env.BUCKET
+            Key: image,
+            Body: buffer,
+            ContentType: 'image/png',
+            Bucket: process.env.BUCKET
         };
+        const client = new S3Client();
         const command = new PutObjectCommand(input);
         const response = await client.send(command);
+
+        return image;
     } catch (e) {
         console.error(e);
         throw e;
