@@ -20,7 +20,7 @@ In cdk.json, choose a name for the private hosted zone and subdomain.  A bucket 
     }
 ```
 
-Run the SSL script to a create self-signed certificate and import it into ACM.  This will set the cert ARN in cdk.json that will be used to offload TLS on the ALB.
+Run the SSL script to create a self-signed certificate and import it into ACM.  This will set the cert ARN in cdk.json that will be used to offload TLS on the ALB.
 ```
 cd ssl
 ./ssl.sh <subdomain>
