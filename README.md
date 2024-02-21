@@ -20,7 +20,7 @@ In cdk.json, choose a name for the private hosted zone and subdomain.  A bucket 
     }
 ```
 
-Run the SSL script to create a self-signed certificate and import it into ACM.  This will set the cert ARN in cdk.json that will be used to offload TLS on the ALB.
+Run the SSL script to create a self-signed certificate and import it into ACM.  This will also set the cert ARN in cdk.json that will be used to offload TLS on the ALB.
 ```
 cd ssl
 ./ssl.sh <subdomain>
@@ -31,3 +31,21 @@ Deploy the CDK stack
 cd ..
 cdk deploy
 ```
+
+## Test
+
+The stack includes a VPC enabled lambda that can take screenshots of the internal websites.
+
+<ol>
+  <li>Open the Lambda console</li>
+  <li>Select the scraper function</li>
+  <li>Go to the Test tab and set the event url
+
+```
+"url": "https://poc.sparxlabs.com/site1/index.html"
+```
+  </li>
+  <li>Open the S3 console</li>
+  <li>Select the static site bucket</li>
+  <li>Open the screenshots to verify the websites are displaying correctly</li>
+</ol>
