@@ -20,7 +20,8 @@
   "context": {
     "app": {
       "sub": "poc",
-      "zone": "sparxlabs.com",
+      "zone": "deeslabs.net",
+      "ingress": "",
       "cert": ""
     },
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,

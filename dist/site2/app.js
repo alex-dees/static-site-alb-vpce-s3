@@ -1,1 +1,0 @@
-document.getElementById('name').innerHTML = 'Site 2!'

@@ -1,10 +1,39 @@
-<html lang="en">
-  <head>
-    <title>Static Site</title>
-    <link rel="stylesheet" href="site.css">
-  </head>
-  <body>
-    <h1 id="name"></h1>
-    <script src="app.js"></script>
-  </body>
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <title>Dashboard Embedding Example</title>
+        <script src="config.js"></script>
+        <script src="quicksight-embedding-js-sdk.min.js"></script>
+        <script type="text/javascript">
+            const embedDashboard = async() => {
+                const {
+                    createEmbeddingContext,
+                } = QuickSightEmbedding;
+
+                const embeddingContext = await createEmbeddingContext({
+                    onChange: (changeEvent, metadata) => {
+                        console.log('Context received a change', changeEvent, metadata);
+                    },
+                });
+
+                const resp = await fetch(api);
+                const embed = await resp.text();
+
+                const frameOptions = {
+                    url: embed,
+                    width: "1000px",
+                    height: "700px",
+                    container: '#experience-container'
+                };
+
+                const embeddedDashboardExperience = await embeddingContext.embedDashboard(frameOptions);
+            };
+        </script>
+    </head>
+
+    <body onload="embedDashboard()">
+        <div id="experience-container"></div>
+    </body>
+
 </html>

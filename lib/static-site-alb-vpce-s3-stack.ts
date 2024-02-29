@@ -1,21 +1,24 @@
-import { Net } from './setup/net';
-import { Shared } from './setup/shared';
-import { Scraper } from './scraper';
-import { StaticSite } from './static-site';
-
+import * as fs from 'fs';
+import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import * as r53 from 'aws-cdk-lib/aws-route53';
+
+import { Net } from './setup/net';
+import { Shared } from './setup/shared';
+import { Embedder } from './embedder';
+import { StaticSite } from './static-site';
 
 export interface IContext {
   sub: string,
   zone: string,
-  cert: string
+  cert: string,
+  ingress: string,
 }
 
 export class StaticSiteAlbVpceS3Stack extends cdk.Stack {
-  private net: Net;
+  private net: Net;  
   private shared: Shared;
+  private fqdn: string;
 
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
     super(scope, id, props);
@@ -23,7 +26,18 @@ export class StaticSiteAlbVpceS3Stack extends cdk.Stack {
     // create prereqs
     this.Setup();
 
-    // deploy site and add rule
+    // add embed lambda to lb
+    new Embedder(this, 'Embedder', {
+      path: '/embed',
+      priority: 5,
+      listener: this.shared.listener
+    });
+
+    // set url for embed api
+    const api = `const api = 'https://${this.fqdn}/embed'`;
+    fs.writeFileSync(path.join(__dirname, '../dist/site2', 'config.js'), api);
+
+    // add static sites to lb
     new StaticSite(this, 'Site', {
       path: '/site*',
       asset: './dist',
@@ -32,31 +46,25 @@ export class StaticSiteAlbVpceS3Stack extends cdk.Stack {
       listener: this.shared.listener,
       targetGroup: this.shared.targetGroup
     });
-
-    // get screenshots of website
-    new Scraper(this, 'Scraper', this.net.vpc);
   }
 
   private Setup() {
     const ctx = <IContext>this
       .node.tryGetContext('app');
-    
+
+    this.fqdn = `${ctx.sub}.${ctx.zone}`;
+
     // create platform resources
     this.net = new Net(this, 'Net', ctx.zone);
-
-    // create shared app resources
-    // bucket name must match subdomain
+    
+    // create shared app resources    
     this.shared = new Shared(this, 'Shared', {
       cert: ctx.cert,
       vpc: this.net.vpc,
-      s3Ep: this.net.s3Ep,
-      bucket: `${ctx.sub}.${ctx.zone}`
-    });
-
-    new r53.CnameRecord(this, 'Cname', {
+      sub: ctx.sub,
       zone: this.net.zone,
-      recordName: ctx.sub,
-      domainName: this.shared.lb.loadBalancerDnsName
+      s3Ep: this.net.s3Ep,
+      ingress: ctx.ingress
     });
   }
 }

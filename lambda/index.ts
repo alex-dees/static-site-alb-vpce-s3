@@ -1,34 +1,36 @@
 import { Handler } from "aws-lambda";
-import chromium from "@sparticuz/chromium";
-import puppeteer, { Browser, Page } from "puppeteer-core";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { QuickSightClient, GenerateEmbedUrlForAnonymousUserCommand } from "@aws-sdk/client-quicksight";
+
+// TO-DO: pass these to function
+const region = ''
+const account = '';
+const dashboard = '';
+const dashboardArn = ``;
 
 export const handler: Handler = async (event) => {
     try {
-        const browser = await puppeteer.launch({
-            args: chromium.args,
-            defaultViewport: chromium.defaultViewport,
-            executablePath: await chromium.executablePath(),
-            headless: chromium.headless,
-            ignoreHTTPSErrors: true,
-        }); 
-        
-        const page = await browser.newPage();
-        await page.goto(<string>event.url);
-        const buffer = await page.screenshot();
-        
-        const image = `${Date.now()}.png`;
+        const client = new QuickSightClient({ region });
         const input = {
-            Key: image,
-            Body: buffer,
-            ContentType: 'image/png',
-            Bucket: process.env.BUCKET
+            Namespace: 'default',
+            AwsAccountId: account,
+            SessionLifetimeInMinutes: 600,
+            ExperienceConfiguration: {
+                Dashboard: {
+                    InitialDashboardId: dashboard
+                }
+            },    
+            AuthorizedResourceArns: [ dashboardArn ]
         };
-        const client = new S3Client();
-        const command = new PutObjectCommand(input);
+        const command = new GenerateEmbedUrlForAnonymousUserCommand(input);
         const response = await client.send(command);
-
-        return image;
+        
+        // https://docs.aws.amazon.com/elasticloadbalancing/latest/application/lambda-functions.html#respond-to-load-balancer
+        return {
+            statusCode: 200,
+            isBase64Encoded: false,
+            body: response.EmbedUrl,
+            headers: { 'Content-Type': 'text/html;'}
+        };
     } catch (e) {
         console.error(e);
         throw e;

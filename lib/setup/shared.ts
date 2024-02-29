@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as r53 from 'aws-cdk-lib/aws-route53';
 import * as cr from 'aws-cdk-lib/custom-resources';
 import * as elb from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as elbTgt from 'aws-cdk-lib/aws-elasticloadbalancingv2-targets';
@@ -10,7 +11,9 @@ import * as elbTgt from 'aws-cdk-lib/aws-elasticloadbalancingv2-targets';
 export interface SharedProps {
     vpc: ec2.IVpc,
     cert: string,
-    bucket: string
+    sub: string,
+    zone: r53.IHostedZone,
+    ingress: string,
     s3Ep: ec2.InterfaceVpcEndpoint
 }
 
@@ -26,6 +29,7 @@ export class Shared extends Construct {
         this.bucket = this.createBucket();
         this.listener = this.createListener();
         this.targetGroup = this.createTgtGrp();
+        this.createRecord();
     }
 
     private createListener() {
@@ -36,7 +40,6 @@ export class Shared extends Construct {
 
         return new elb.ApplicationListener(this, 'Listener', {            
             port: 443,
-            open: false,
             certificates: [cert],
             loadBalancer: this.lb,
             defaultAction: elb.ListenerAction.fixedResponse(404)
@@ -46,17 +49,30 @@ export class Shared extends Construct {
     private createLb() {
         const vpc = this.props.vpc;    
         const sg = new ec2.SecurityGroup(this, 'LbSg', { vpc });
-        sg.addIngressRule(ec2.Peer.ipv4(vpc.vpcCidrBlock), ec2.Port.allTcp());
+        sg.addIngressRule(ec2.Peer.ipv4(this.props.ingress), ec2.Port.allTcp());
         return new elb.ApplicationLoadBalancer(this, 'Lb', {
           vpc,
-          securityGroup: sg
+          securityGroup: sg,
+          internetFacing: true
         });
     }
 
+    private createRecord() {
+        new r53.CnameRecord(this, 'Cname', {
+            zone: this.props.zone,
+            recordName: this.props.sub,
+            domainName: this.lb.loadBalancerDnsName
+        });
+    }
+
+    // website bucket
     private createBucket() {
+        const zone = this.props.zone.zoneName;
+
+        // bucket name must match subdomain
         const bkt = new s3.Bucket(this, 'Bkt', {
             autoDeleteObjects: true,
-            bucketName: this.props.bucket,
+            bucketName: `${this.props.sub}.${zone}`,
             removalPolicy: cdk.RemovalPolicy.DESTROY
         });
 
@@ -77,6 +93,7 @@ export class Shared extends Construct {
         return bkt;
     }
 
+    // target group for s3 endpoints
     private createTgtGrp() {
         const ips = this.getEpIps();
         return new elb.ApplicationTargetGroup(this, 'TgtGrp', {
