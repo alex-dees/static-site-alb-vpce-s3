@@ -10,13 +10,16 @@ import * as elbTgt from 'aws-cdk-lib/aws-elasticloadbalancingv2-targets';
 export interface EmbedProps {
   path: string,
   priority: number,
-  listener: elb.ApplicationListener
+  listener: elb.ApplicationListener,
+  dashboard: string
 }
 
 export class Embedder extends Construct {
   constructor(scope: Construct, id: string, private props: EmbedProps) {
     super(scope, id);
   
+    const stack = cdk.Stack.of(this);
+    
     const fn = new nodefn.NodejsFunction(this, 'Fn', {
       memorySize: 2048,
       timeout: cdk.Duration.seconds(30),
@@ -27,8 +30,10 @@ export class Embedder extends Construct {
           '@aws-sdk/*'
         ]
       },
-      environment: {  
-        // BUCKET: bkt.bucketName
+      environment: {
+        REGION: stack.region,
+        ACCOUNT: stack.account,
+        DASHBOARD: props.dashboard
       }
     });
   

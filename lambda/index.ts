@@ -1,11 +1,13 @@
 import { Handler } from "aws-lambda";
-import { QuickSightClient, GenerateEmbedUrlForAnonymousUserCommand } from "@aws-sdk/client-quicksight";
+import { 
+    QuickSightClient, 
+    GenerateEmbedUrlForAnonymousUserCommand 
+} from "@aws-sdk/client-quicksight";
 
-// TO-DO: pass these to function
-const region = ''
-const account = '';
-const dashboard = '';
-const dashboardArn = ``;
+const region = process.env['REGION']
+const account = process.env['ACCOUNT'];
+const dashboard = process.env['DASHBOARD'];
+const arn = `arn:aws:quicksight:${region}:${account}:dashboard/${dashboard}`;
 
 export const handler: Handler = async (event) => {
     try {
@@ -14,12 +16,12 @@ export const handler: Handler = async (event) => {
             Namespace: 'default',
             AwsAccountId: account,
             SessionLifetimeInMinutes: 600,
+            AuthorizedResourceArns: [ arn ],
             ExperienceConfiguration: {
                 Dashboard: {
                     InitialDashboardId: dashboard
                 }
-            },    
-            AuthorizedResourceArns: [ dashboardArn ]
+            }
         };
         const command = new GenerateEmbedUrlForAnonymousUserCommand(input);
         const response = await client.send(command);

@@ -22,6 +22,7 @@
       "sub": "poc",
       "zone": "deeslabs.net",
       "ingress": "",
+      "dashboard": "",
       "cert": ""
     },
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,

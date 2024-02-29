@@ -13,12 +13,14 @@ export interface IContext {
   zone: string,
   cert: string,
   ingress: string,
+  dashboard: string
 }
 
 export class StaticSiteAlbVpceS3Stack extends cdk.Stack {
-  private net: Net;  
-  private shared: Shared;
+  private net: Net;
   private fqdn: string;
+  private ctx: IContext;
+  private shared: Shared;
 
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
     super(scope, id, props);
@@ -30,11 +32,12 @@ export class StaticSiteAlbVpceS3Stack extends cdk.Stack {
     new Embedder(this, 'Embedder', {
       path: '/embed',
       priority: 5,
+      dashboard: this.ctx.dashboard,
       listener: this.shared.listener
     });
 
     // set url for embed api
-    const api = `const api = 'https://${this.fqdn}/embed'`;
+    const api = `const api = 'https://${this.fqdn}/embed';`;
     fs.writeFileSync(path.join(__dirname, '../dist/site2', 'config.js'), api);
 
     // add static sites to lb
@@ -49,22 +52,22 @@ export class StaticSiteAlbVpceS3Stack extends cdk.Stack {
   }
 
   private Setup() {
-    const ctx = <IContext>this
+    this.ctx = <IContext>this
       .node.tryGetContext('app');
 
-    this.fqdn = `${ctx.sub}.${ctx.zone}`;
+    this.fqdn = `${this.ctx.sub}.${this.ctx.zone}`;
 
     // create platform resources
-    this.net = new Net(this, 'Net', ctx.zone);
+    this.net = new Net(this, 'Net', this.ctx.zone);
     
     // create shared app resources    
     this.shared = new Shared(this, 'Shared', {
-      cert: ctx.cert,
       vpc: this.net.vpc,
-      sub: ctx.sub,
+      sub: this.ctx.sub,
       zone: this.net.zone,
+      cert: this.ctx.cert,
       s3Ep: this.net.s3Ep,
-      ingress: ctx.ingress
+      ingress: this.ctx.ingress
     });
   }
 }
